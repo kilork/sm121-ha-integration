@@ -5,11 +5,15 @@
 # fresh (a supervisor re-sync loop), and serves the `sm121 web` dashboard
 # on port 3100 — serve/stop/power from the browser, no Mac involved.
 #
-# The image is built by the launcher repo (`make addon-image`,
-# multi-stage, compiles sm121 in-container) and pushed with
-# `make addon-push` to the [registry] base (ghcr.io/kilork).
+# The THIN image (no sm121 binary, no toolchain — the entrypoint compiles
+# sm121 for the container's own arch on first boot) is built + published
+# by THIS repo's GitHub Actions → ghcr.io/kilork/sm121-addon.
 #
 # Design: specs/tech-architecture/ha-addon-recipe-repos.md (launcher repo).
+#
+# NOTE: the option schema is the OLD-STYLE (flat `option: str/int`) form —
+# the new list/editor schema is silently rejected by older supervisors
+# (the add-on simply doesn't appear in the store).
 
 name: "sm121"
 description: "sm121 DGX Spark launcher — recipe-repo sync + the sm121 web dashboard (serve/stop/power)"
@@ -40,10 +44,11 @@ boot: "always"
 reboot: "always"
 
 # The add-on options map 1:1 to the entrypoint's env vars (option name
-# uppercased): sm121_recipe_repos → SM121_RECIPE_REPOS (JSON list of
-# {url, token}), etc. See docker-images/sm121-addon/entrypoint.sh.
+# uppercased): sm121_recipe_repos → SM121_RECIPE_REPOS (a JSON STRING:
+# [{"url":..., "token":...}] — the entrypoint parses it with jq), etc.
+# See sm121/rootfs/entrypoint.sh.
 options:
-  sm121_recipe_repos: []
+  sm121_recipe_repos: ""
   sm121_ssh_user: ""
   sm121_ssh_key_b64: ""
   sm121_ha_url: ""
@@ -56,99 +61,19 @@ options:
   sm121_repo_resync_minutes: 10
   sm121_web_token: ""
 
+# OLD-STYLE schema (compatible with every supervisor generation).
+# Multi-line values (the cluster TOML, the base64 key, the recipe-repos
+# JSON) are plain string fields — paste them in the UI.
 schema:
-  sm121:
-    - sm121_recipe_repos:
-        name: "Recipe repos (ordered; first wins on a recipe-name collision)"
-        description: >-
-          Git recipe repos, highest priority first, e.g.
-          production then playground. Each entry: {url, token} — the token
-          is a deploy key / PAT for private repos (empty for public).
-        type: list
-        default: []
-        editor:
-          type: object
-          fields:
-            - url:
-                required: true
-                type: string
-            - token:
-                type: string
-                default: ""
-    - sm121_ssh_user:
-        name: "SSH user (cluster nodes)"
-        description: "The ssh_user the launcher uses to reach the DGX nodes."
-        type: string
-        default: ""
-    - sm121_ssh_key_b64:
-        name: "SSH private key (base64)"
-        description: >-
-          base64 of the private key file (e.g. `base64 -i ~/.ssh/id_ed25519`).
-          Written to /etc/sm121/ssh_key (chmod 600) inside the container —
-          never baked into the image.
-        type: string
-        default: ""
-    - sm121_ha_url:
-        name: "Home Assistant URL (for power entities)"
-        description: "The HA REST endpoint the launcher uses for power on/off (optional)."
-        type: string
-        default: ""
-    - sm121_ha_token:
-        name: "Home Assistant token"
-        type: string
-        default: ""
-    - sm121_registry_base:
-        name: "Image registry base"
-        description: "e.g. ghcr.io/kilork — enables --image-source registry pulls (optional)."
-        type: string
-        default: ""
-    - sm121_config_extra:
-        name: "Cluster config (raw TOML)"
-        description: >-
-          Raw TOML appended to the generated config, verbatim — this is
-          where the CLUSTER CONFIG lives: [[clusters]]/nccl (private IPs —
-          never in the public recipe repo) + [home_assistant] + [mikrotik]
-          + [registry]. Stored in HA's own option storage (private, on the
-          Pi); kept out of the log. If it carries [home_assistant] /
-          [registry], leave the matching flat options empty.
-        type: string
-        default: ""
-    - sm121_launcher_url:
-        name: "Launcher repo (sm121 is compiled from it)"
-        description: >-
-          The sm121 launcher is compiled ON THE PI from this repo on first
-          boot (cached in the add-on's data folder) — the image carries no
-          binary, so the arch always matches and the binary never goes
-          stale. A private mirror works too.
-        type: string
-        default: "https://git.kilork.org/sm121/launcher.git"
-    - sm121_launcher_rev:
-        name: "Launcher rev to compile (branch or commit)"
-        description: >-
-          Default `main` (tracking). Set a commit hash to pin the binary;
-          changing this option recompiles once on the next start.
-        type: string
-        default: "main"
-    - sm121_build_jobs:
-        name: "Compile parallelism (cargo -j)"
-        description: >-
-          Jobs for the first-boot compile (default 2 — a Pi 4 must not OOM
-          under HA; a Pi 5 can use 4).
-        type: int
-        default: 2
-    - sm121_repo_resync_minutes:
-        name: "Recipe-repo re-sync interval (minutes)"
-        description: "How often the background supervisor re-pulls the recipe repos (default 10)."
-        type: int
-        default: 10
-        constraints:
-          inclusive_min: 1
-          inclusive_max: 1440
-    - sm121_web_token:
-        name: "Dashboard bearer token"
-        description: >-
-          REQUIRED — the dashboard binds 0.0.0.0 and refuses to serve the
-          data endpoints without a bearer token. Use it in the browser:
-          http://<ha-host>:3100 (the UI asks for / carries the token).
-        type: string
-        default: ""
+  sm121_recipe_repos: str
+  sm121_ssh_user: str
+  sm121_ssh_key_b64: str
+  sm121_ha_url: str
+  sm121_ha_token: str
+  sm121_registry_base: str
+  sm121_config_extra: str
+  sm121_launcher_url: str
+  sm121_launcher_rev: str
+  sm121_build_jobs: int
+  sm121_repo_resync_minutes: int
+  sm121_web_token: str
