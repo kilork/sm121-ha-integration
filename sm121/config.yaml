@@ -39,9 +39,13 @@ host_access: true
 environment:
   - SM121_WEB_PORT=3100
 
-startup: "once"
-boot: "always"
-reboot: "always"
+# Apps-framework lifecycle (this HA generation's supervisor validates
+# `startup`/`boot` against the Apps schema — the legacy "once"/"always"
+# values are rejected and the add-on silently disappears from the store):
+# startup=services (start when core services are up, like cups-addon),
+# boot=auto (start at HA boot — the 24/7 service behaviour).
+startup: "services"
+boot: "auto"
 
 # The add-on options map 1:1 to the entrypoint's env vars (option name
 # uppercased): sm121_recipe_repos → SM121_RECIPE_REPOS (a JSON STRING:
