@@ -1,0 +1,17 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "sm121 Launcher",
+        "description": "Connect to the sm121 web dashboard API.",
+        "data": {
+          "api_url": "API URL",
+          "token": "Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the sm121 API"
+    }
+  }
+}

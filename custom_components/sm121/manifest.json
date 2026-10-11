@@ -1,0 +1,12 @@
+{
+  "domain": "sm121",
+  "name": "sm121 Launcher",
+  "version": "0.1.0",
+  "config_flow": true,
+  "dependencies": [],
+  "requirements": [],
+  "codeowners": ["@kilork"],
+  "documentation": "https://git.kilork.org/sm121/sm121-ha-integration",
+  "issue_tracker": "https://git.kilork.org/sm121/sm121-ha-integration/issues",
+  "iot_class": "local_polling"
+}
