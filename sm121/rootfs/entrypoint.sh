@@ -14,6 +14,11 @@
 # Env (the add-on options — HA maps each `sm121_*` option to the
 # uppercased env var; the standalone flow sets the same names directly):
 #   SM121_RECIPE_REPOS        JSON list of {"url","token"} → [[recipe_repos]]
+#   SM121_BASE_CONFIG_URL   private cluster-config repo (git URL) — its
+#                           config.toml (clusters + cluster-side secrets)
+#                           becomes the base config, fetched at boot
+#   SM121_BASE_CONFIG_TOKEN Gitea PAT for that repo (embedded in the clone
+#                           URL, never logged)
 #   SM121_SSH_USER            ssh_user
 #   SM121_SSH_KEY_B64         base64 private key (HA option; written to KEY_PATH)
 #   SM121_SSH_KEY             path to a mounted private key (docker secret mount)
@@ -41,6 +46,24 @@ CONFIG=/etc/sm121/config.toml
 mkdir -p /etc/sm121
 
 # --- 1. the effective config --------------------------------------------------
+# Base config: an optional PRIVATE cluster-config repo (SM121_BASE_CONFIG_URL,
+# e.g. git.kilork.org/sm121/cluster-config) — its config.toml carries the
+# [[clusters]]/nccl definitions + cluster-side secrets ([home_assistant],
+# [mikrotik]); the public recipe repo deliberately has none. The token is
+# embedded in the clone URL and the URL is never logged.
+if [ -n "${SM121_BASE_CONFIG_URL:-}" ]; then
+  BASE_URL="$SM121_BASE_CONFIG_URL"
+  if [ -n "${SM121_BASE_CONFIG_TOKEN:-}" ]; then
+    case "$BASE_URL" in
+      https://*) BASE_URL="https://git:${SM121_BASE_CONFIG_TOKEN}@${BASE_URL#https://}" ;;
+    esac
+  fi
+  BASE_SRC="$(mktemp -d)"
+  git clone -q --depth 1 "$BASE_URL" "$BASE_SRC"
+  cp "$BASE_SRC/config.toml" /etc/sm121/base.toml
+  rm -rf "$BASE_SRC"
+  echo "sm121: base config fetched (clusters: $(grep -c '^\[\[clusters\]\]' /etc/sm121/base.toml))"
+fi
 if [ -f /etc/sm121/base.toml ]; then
   cp /etc/sm121/base.toml "$CONFIG"
 else
@@ -116,7 +139,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # full release build: minutes on a Pi 5, longer on a Pi 4) — the add-on
 # just shows "starting".
 SM121_BIN="$HOME/.sm121/bin/sm121"
-LAUNCHER_URL="${SM121_LAUNCHER_URL:-https://git.kilork.org/sm121/sm121-launcher.git}"
+LAUNCHER_URL="${SM121_LAUNCHER_URL:-https://git.kilork.org/sm121/launcher.git}"
 LAUNCHER_REV="${SM121_LAUNCHER_REV:-main}"
 STAMP="$HOME/.sm121/rev"
 if [ ! -x "$SM121_BIN" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "$LAUNCHER_REV" ]; then

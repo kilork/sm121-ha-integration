@@ -1,12 +1,12 @@
 # sm121 Home Assistant Add-on
 
-Runs the [sm121](https://git.kilork.org/sm121/sm121-launcher) DGX Spark
+Runs the [sm121](https://git.kilork.org/sm121/launcher) DGX Spark
 cluster launcher **inside Home Assistant as a Docker add-on** — 24/7,
 independent of the Mac. Recipes + config live in **git recipe repos**;
 the add-on clones/pulls them, keeps them fresh, and serves the `sm121
 web` dashboard on port **3100** (serve/stop/power from the browser).
 
-Design: [`ha-addon-recipe-repos.md`](https://git.kilork.org/sm121/sm121-launcher/blob/master/specs/tech-architecture/ha-addon-recipe-repos.md)
+Design: [`ha-addon-recipe-repos.md`](https://git.kilork.org/sm121/launcher/blob/main/specs/tech-architecture/ha-addon-recipe-repos.md)
 in the launcher repo.
 
 ## Layout
@@ -18,6 +18,12 @@ in the launcher repo.
 | `sm121/Dockerfile` + `sm121/rootfs/` | the thin image (no sm121 binary, no toolchain) + the entrypoint |
 | `.github/workflows/` | GitHub Actions (the `home-assistant/builder` actions, same pattern as `kilork/cups-addon`): builds each arch natively, pushes `ghcr.io/kilork/sm121-addon` via OIDC — **no `docker login` anywhere** |
 | `custom_components/sm121/` | **superseded** custom-integration prototype (commit `1ccd032`) — kept as reference; HA *entities* are a phase-2 nicety over the add-on's REST API |
+
+**Cluster config is NOT in the (public) recipe repo** — it carries
+private network details. It lives in the **private**
+`git.kilork.org/sm121/cluster-config` repo, fetched at boot via the
+`sm121_base_config` (+ `sm121_base_config_token`) options and used as the
+base config (a private repo may carry `[home_assistant]` / `[mikrotik]`).
 
 ## The image
 
@@ -58,6 +64,9 @@ docker build -t sm121-addon:latest sm121/    # from this repo
    - **SSH user** + **SSH private key (base64)** — `base64 -i
      ~/.ssh/id_ed25519`; written to `/etc/sm121/ssh_key` (chmod 600) in
      the container, never baked into the image.
+   - **Cluster config repo** (private git URL + PAT) — the base config
+     (clusters/nccl with the private IPs + `[home_assistant]` /
+     `[mikrotik]`), fetched at boot from `git.kilork.org/sm121/cluster-config`.
    - **HA URL / token** — for the launcher's power entities (optional).
    - **Image registry base** — e.g. `ghcr.io/kilork`; enables
      `--image-source registry` pulls of prebuilt images.

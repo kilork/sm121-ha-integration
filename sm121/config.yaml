@@ -46,11 +46,13 @@ options:
   sm121_recipe_repos: []
   sm121_ssh_user: ""
   sm121_ssh_key_b64: ""
+  sm121_base_config: ""
+  sm121_base_config_token: ""
   sm121_ha_url: ""
   sm121_ha_token: ""
   sm121_registry_base: ""
   sm121_config_extra: ""
-  sm121_launcher_url: "https://git.kilork.org/sm121/sm121-launcher.git"
+  sm121_launcher_url: "https://git.kilork.org/sm121/launcher.git"
   sm121_launcher_rev: "main"
   sm121_build_jobs: 2
   sm121_repo_resync_minutes: 10
@@ -88,6 +90,23 @@ schema:
           never baked into the image.
         type: string
         default: ""
+    - sm121_base_config:
+        name: "Cluster config repo (private git URL)"
+        description: >-
+          A PRIVATE repo (e.g. git.kilork.org/sm121/cluster-config) whose
+          config.toml is the base config: [[clusters]]/nccl (private IPs —
+          never in the public recipe repo) + cluster-side secrets
+          ([home_assistant], [mikrotik]). Fetched at boot; leave empty to
+          run without a base config.
+        type: string
+        default: ""
+    - sm121_base_config_token:
+        name: "Cluster config repo token (Gitea PAT)"
+        description: >-
+          Read-access PAT for the cluster config repo (embedded in the clone
+          URL, kept out of the log). Empty for a public repo.
+        type: string
+        default: ""
     - sm121_ha_url:
         name: "Home Assistant URL (for power entities)"
         description: "The HA REST endpoint the launcher uses for power on/off (optional)."
@@ -119,7 +138,7 @@ schema:
           binary, so the arch always matches and the binary never goes
           stale. A private mirror works too.
         type: string
-        default: "https://git.kilork.org/sm121/sm121-launcher.git"
+        default: "https://git.kilork.org/sm121/launcher.git"
     - sm121_launcher_rev:
         name: "Launcher rev to compile (branch or commit)"
         description: >-
