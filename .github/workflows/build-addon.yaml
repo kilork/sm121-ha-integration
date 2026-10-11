@@ -1,105 +1,90 @@
-name: Build addon
+# Build + publish the sm121 HA add-on image (ghcr.io/kilork/sm121-addon).
+#
+# The image SHIPS a precompiled sm121 binary (no toolchain, no
+# compile-on-boot — a 4 GB Pi must not OOM on a release build):
+#   1. per-arch job (aarch64 arm runner / amd64 x86 runner): check out
+#      this repo + the launcher repo (launcher-src/), docker-build the
+#      multi-stage sm121/Dockerfile (rust:alpine compiles the launcher →
+#      trivial cargo build on pinned rust:alpine → dynamic-musl binary →
+#      alpine final, ~20 MB), push the per-arch image.
+#   2. manifest job: compose the multi-arch manifest (:latest + :1.1.0).
+#
+# Launcher change → push to the launcher repo does NOT trigger this
+# workflow (cross-repo); re-run it (workflow_dispatch) or push a no-op
+# here — the build always compiles launcher main.
+name: Build sm121
 
 on:
-  workflow_call:
-    inputs:
-      addon:
-        required: true
-        type: string
-      publish:
-        required: true
-        type: boolean
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  prepare:
-    name: Prepare
-    runs-on: ubuntu-latest
-    outputs:
-      architectures: ${{ steps.info.outputs.architectures }}
-      build_matrix: ${{ steps.matrix.outputs.matrix }}
-      image_name: ${{ steps.normalize.outputs.image_name }}
-      name: ${{ steps.normalize.outputs.name }}
-      description: ${{ steps.normalize.outputs.description }}
-      url: ${{ steps.normalize.outputs.url }}
-      registry_prefix: ${{ steps.normalize.outputs.registry_prefix }}
-      version: ${{ steps.normalize.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Get addon information
-        id: info
-        uses: home-assistant/actions/helpers/info@master
-        with:
-          path: "./${{ inputs.addon }}"
-      - name: Normalize addon information
-        id: normalize
-        run: |
-          image=${{ steps.info.outputs.image }}
-          echo "image_name=${image##*/}" >> "$GITHUB_OUTPUT"
-          echo "registry_prefix=${image%/*}" >> "$GITHUB_OUTPUT"
-          version=${{ steps.info.outputs.version }}
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          name=${{ steps.info.outputs.name }}
-          echo "name=${name}" >> "$GITHUB_OUTPUT"
-          description=${{ steps.info.outputs.description }}
-          echo "description=${description}" >> "$GITHUB_OUTPUT"
-          url=${{ steps.info.outputs.url }}
-          if [[ -n "$url" && "$url" != "null" ]]; then
-            echo "url=${url}" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Prepare build matrix
-        id: matrix
-        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.06.0
-        with:
-          architectures: ${{ steps.info.outputs.architectures }}
-          image-name: ${{ steps.normalize.outputs.image_name }}
-          registry-prefix: ${{ steps.normalize.outputs.registry_prefix }}
-
   build:
-    name: Build ${{ matrix.arch }} image
-    needs: prepare
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-      id-token: write
-      packages: write
+    name: Build ${{ matrix.arch }}
     strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.prepare.outputs.build_matrix) }}
+      matrix:
+        arch: [aarch64, amd64]
+    runs-on: ubuntu-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build image
-        uses: home-assistant/builder/actions/build-image@2026.06.0
+
+      - name: Checkout the launcher repo (public)
+        uses: actions/checkout@v4
         with:
-          arch: ${{ matrix.arch }}
-          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
-          context: "./${{ inputs.addon }}"
-          image: ${{ matrix.image }}
-          image-tags: |
-            ${{ needs.prepare.outputs.version }}
-            latest
-          labels: |
-            io.hass.type=addon
-            io.hass.name=${{ needs.prepare.outputs.name }}
-            io.hass.description=${{ needs.prepare.outputs.description }}
-          push: ${{ inputs.publish }}
-          version: ${{ needs.prepare.outputs.version }}
+          url: "https://git.kilork.org/sm121/launcher.git"
+          ref: "main"
+          path: "launcher-src"
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Build + push the per-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: sm121/Dockerfile
+          platforms: >-
+            ${{
+              matrix.arch == 'aarch64'
+              && 'linux/arm64'
+              || 'linux/amd64'
+            }}
+          push: true
+          cache-from: type=gha,name=sm121-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,name=sm121-${{ matrix.arch }}
+          tags: |
+            ghcr.io/kilork/${{ matrix.arch }}-sm121-addon:latest
+            ghcr.io/kilork/${{ matrix.arch }}-sm121-addon:1.1.0
 
   manifest:
-    name: Publish multi-arch manifest
-    needs: [prepare, build]
-    if: inputs.publish
-    runs-on: ubuntu-latest
+    name: Multi-arch manifest
+    needs: build
+    runs-on: ubuntu-24.04
     permissions:
-      id-token: write
       packages: write
     steps:
-      - name: Publish multi-arch manifest
-        uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.06.0
+      - uses: docker/login-action@v3
         with:
-          architectures: ${{ needs.prepare.outputs.architectures }}
-          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
-          image-name: ${{ needs.prepare.outputs.image_name }}
-          image-tags: |
-            ${{ needs.prepare.outputs.version }}
-            latest
-          registry-prefix: ${{ needs.prepare.outputs.registry_prefix }}
+          registry: ghcr.io
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Compose the multi-arch manifest
+        run: |
+          docker buildx imagetools create --remove \
+            -t ghcr.io/kilork/sm121-addon:latest \
+            -t ghcr.io/kilork/sm121-addon:1.1.0 \
+            ghcr.io/kilork/aarch64-sm121-addon:latest \
+            ghcr.io/kilork/amd64-sm121-addon:latest

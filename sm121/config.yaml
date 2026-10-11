@@ -5,9 +5,12 @@
 # fresh (a supervisor re-sync loop), and serves the `sm121 web` dashboard
 # on port 3100 — serve/stop/power from the browser, no Mac involved.
 #
-# The THIN image (no sm121 binary, no toolchain — the entrypoint compiles
-# sm121 for the container's own arch on first boot) is built + published
-# by THIS repo's GitHub Actions → ghcr.io/kilork/sm121-addon.
+# The THIN alpine image SHIPS a precompiled sm121 binary (CI compiles it
+# from the launcher repo per arch — pinned rust:alpine, trivial cargo
+# build → alpine final, dynamic-musl binary, ~20 MB; see
+# .github/workflows/build-addon.yaml) and publishes ghcr.io/kilork/sm121-addon. No toolchain, no
+# compile-on-boot — a 4 GB Pi must not OOM on a release build. Launcher
+# change → re-run this repo's CI → new image.
 #
 # Design: specs/tech-architecture/ha-addon-recipe-repos.md (launcher repo).
 #
@@ -59,9 +62,6 @@ options:
   sm121_ha_token: ""
   sm121_registry_base: ""
   sm121_config_extra: ""
-  sm121_launcher_url: "https://git.kilork.org/sm121/launcher.git"
-  sm121_launcher_rev: "main"
-  sm121_build_jobs: 2
   sm121_repo_resync_minutes: 10
   sm121_web_token: ""
 
@@ -76,8 +76,5 @@ schema:
   sm121_ha_token: str
   sm121_registry_base: str
   sm121_config_extra: str
-  sm121_launcher_url: str
-  sm121_launcher_rev: str
-  sm121_build_jobs: int
   sm121_repo_resync_minutes: int
   sm121_web_token: str

@@ -29,18 +29,15 @@
 #                             [home_assistant]/[registry], leave the
 #                             matching flat options empty (duplicate TOML
 #                             tables fail the parse). Kept out of the log.
-#   SM121_LAUNCHER_URL        launcher repo (default git.kilork.org/sm121/
-#                             sm121-launcher) — sm121 is COMPILED from it on
-#                             first boot (the Pi is the build host)
-#   SM121_LAUNCHER_REV        rev to compile (default main; a commit hash
-#                             pins the binary)
-#   SM121_BUILD_JOBS          cargo -j (default 2 — a Pi 4 must not OOM)
-#   SM121_RUST_TOOLCHAIN      rustup toolchain for the compile (default
-#                             1.98.1; edition 2024 + let-chains need ≥ 1.88)
 #   SM121_REPO_RESYNC_MINUTES background re-sync interval (default 10)
 #   SM121_WEB_PORT            dashboard port (default 3100)
 #   SM121_WEB_BIND            dashboard bind (default 0.0.0.0)
 #   SM121_WEB_TOKEN           bearer token (REQUIRED for a non-loopback bind)
+#
+# The sm121 binary ships IN THE IMAGE (CI compiles it from the launcher
+# repo per arch — see .github/workflows/build-addon.yaml + Dockerfile).
+# No toolchain, no compile-on-boot: a 4 GB Pi must not OOM on a release
+# build. Launcher change → re-run the add-on repo's CI → new image tag.
 set -eu
 
 CONFIG=/etc/sm121/config.toml
@@ -104,51 +101,10 @@ elif [ -n "${SM121_SSH_KEY:-}" ] && [ -f "$SM121_SSH_KEY" ]; then
   chmod 600 "$KEY_PATH"
 fi
 
-# --- 2a. the Rust toolchain (first boot: install into the data folder) ------
-# NOT baked into the image (GHCR's free tier is 1 GiB of storage; a baked
-# toolchain × 2 archs would bust it). rustup installs into $HOME/.rustup +
-# $HOME/.cargo — the add-on's data folder, so the ~350 MB download happens
-# once per install and survives restarts.
-HOME="${HOME:-/root}"
-if [ ! -x "$HOME/.cargo/bin/cargo" ]; then
-  echo "sm121: installing the Rust toolchain (first boot, ~350 MB download)"
-  curl -sSf https://sh.rustup.rs \
-    | sh -s -- --no-modify-path -y --profile minimal \
-              --default-toolchain "${SM121_RUST_TOOLCHAIN:-1.98.1}"
-fi
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# --- 2b. compile sm121 if needed (the Pi is the build host) ------------------
-# The launcher source comes from the launcher repo (SM121_LAUNCHER_URL @
-# SM121_LAUNCHER_REV). The binary + a rev stamp + the cargo target cache
-# live in the add-on's data folder ($HOME — HA sets it to the add-on's data
-# dir; falls back to /root), so a reboot with an unchanged rev is fast and
-# a rev change recompiles once. First boot is slow (toolchain download + a
-# full release build: minutes on a Pi 5, longer on a Pi 4) — the add-on
-# just shows "starting".
-SM121_BIN="$HOME/.sm121/bin/sm121"
-LAUNCHER_URL="${SM121_LAUNCHER_URL:-https://git.kilork.org/sm121/launcher.git}"
-LAUNCHER_REV="${SM121_LAUNCHER_REV:-main}"
-STAMP="$HOME/.sm121/rev"
-if [ ! -x "$SM121_BIN" ] || [ "$(cat "$STAMP" 2>/dev/null)" != "$LAUNCHER_REV" ]; then
-  echo "sm121: compiling from $LAUNCHER_URL @ $LAUNCHER_REV (first boot / rev changed)"
-  mkdir -p "$HOME/.sm121/bin"
-  SRC="$(mktemp -d)"
-  case "$LAUNCHER_REV" in
-    main|master) git clone -q --depth 1 --branch "$LAUNCHER_REV" "$LAUNCHER_URL" "$SRC" ;;
-    *) git clone -q "$LAUNCHER_URL" "$SRC" && git -C "$SRC" checkout -q "$LAUNCHER_REV" ;;
-  esac
-  CARGO_TARGET_DIR="$HOME/.sm121/target" \
-  CARGO_BUILD_JOBS="${SM121_BUILD_JOBS:-2}" \
-  cargo build --release --manifest-path "$SRC/Cargo.toml"
-  cp "$HOME/.sm121/target/release/sm121" "$SM121_BIN"
-  printf '%s' "$LAUNCHER_REV" > "$STAMP"
-  rm -rf "$SRC"
-  echo "sm121: built ($LAUNCHER_REV) → $SM121_BIN"
-fi
-
 # --- 3 + 4. sync + web, with the re-sync supervisor ----------------------------
-SM121="$SM121_BIN --config $CONFIG"
+# The sm121 binary is baked into the image (CI-compiled per arch — see
+# the Dockerfile); first boot is just a recipe-repo sync: seconds.
+SM121="/usr/local/bin/sm121 --config $CONFIG"
 $SM121 repos sync || echo "warning: initial repo sync failed (the supervisor retries)"
 
 INTERVAL="${SM121_REPO_RESYNC_MINUTES:-10}"

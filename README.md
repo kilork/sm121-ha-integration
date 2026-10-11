@@ -15,7 +15,7 @@ in the launcher repo.
 |------|------|
 | `repository.json` | HA **add-on store** manifest — HA installs this add-on from this repo |
 | `sm121/config.yaml` | the HA add-on manifest (options schema → the entrypoint's env vars) |
-| `sm121/Dockerfile` + `sm121/rootfs/` | the thin image (no sm121 binary, no toolchain) + the entrypoint |
+| `sm121/Dockerfile` + `sm121/rootfs/` | the multi-stage image (pinned rust:alpine compiles sm121 trivially → alpine ships the binary) + the entrypoint |
 | `.github/workflows/` | GitHub Actions (the `home-assistant/builder` actions, same pattern as `kilork/cups-addon`): builds each arch natively, pushes `ghcr.io/kilork/sm121-addon` via OIDC — **no `docker login` anywhere** |
 | `custom_components/sm121/` | **superseded** custom-integration prototype (commit `1ccd032`) — kept as reference; HA *entities* are a phase-2 nicety over the add-on's REST API |
 
@@ -29,27 +29,32 @@ empty (duplicate TOML tables fail the parse).
 
 ## The image
 
-A THIN image (debian-slim + git/jq/curl/gcc; ~250 MB, small enough for
-GHCR's free tier): the **Pi is the build host**. On first boot the
-entrypoint installs rustup (cached in the add-on's data folder) and
-compiles sm121 from the launcher repo (`sm121_launcher_url` @
-`sm121_launcher_rev`), so the arch always matches (HAOS has no Docker to
-build with) and the binary never goes stale. First boot = toolchain
-download + a full release build (minutes on a Pi 5, longer on a Pi 4;
-`sm121_build_jobs` defaults to 2 so a Pi 4 doesn't OOM under HA).
+Multi-stage (`sm121/Dockerfile`): a **pinned rust:alpine** build stage
+(`rust:1.98.1-alpine3.22`) compiles sm121 from the launcher repo (CI
+checks it out as `launcher-src/` in the build context) with a trivial
+`cargo build --release` (native arch per runner — the CI matrix runs
+each arch on its own runner; the dynamic-musl binary runs on the
+alpine final image); the **alpine:3.22** final image ships it +
+git/jq/curl + the entrypoint (~20 MB — no toolchain, **no
+compile-on-boot**: a 4 GB Pi must not OOM on a release build, so the Pi
+is *not* the build host). The CI matrix
+builds each arch natively (aarch64 on an arm runner, amd64 on x86), so
+the binary always matches the container's arch.
 
 **Built by GitHub Actions** (on push to `main`): one native build per
-arch in `config.yaml` (aarch64 + amd64) → `ghcr.io/kilork/sm121-addon`
-(`:latest` + `:1.0.0`) + the multi-arch manifest. Pushing needs no
-credentials (OIDC `GITHUB_TOKEN`) — but the GHCR package is created
-**private** on first push: set it *public* in the GitHub UI once, so HA
-can pull it anonymously.
+arch → `ghcr.io/kilork/sm121-addon` (`:latest` + `:1.1.0`) + the
+multi-arch manifest. Pushing needs no credentials (OIDC `GITHUB_TOKEN`)
+— but the GHCR package is created **private** on first push: set it
+*public* in the GitHub UI once, so HA can pull it anonymously. A
+launcher change does not trigger this CI (cross-repo) — re-run the
+workflow (or push a no-op here) to ship a new binary.
 
 Local dev / smoke (no CI needed):
 
 ```sh
-docker build -t sm121-addon:latest sm121/    # from this repo
-# launcher repo: scripts/smoke-addon.sh   # entrypoint + file:// recipe repo + file:// launcher checkout + curl /api/state
+# from the LAUNCHER repo (rsyncs itself into this repo's launcher-src/):
+make addon-image
+scripts/smoke-addon.sh    # entrypoint + file:// recipe repo + curl /api/state
 ```
 
 ## Install
@@ -73,10 +78,6 @@ docker build -t sm121-addon:latest sm121/    # from this repo
    - **HA URL / token** — for the launcher's power entities (optional).
    - **Image registry base** — e.g. `ghcr.io/kilork`; enables
      `--image-source registry` pulls of prebuilt images.
-   - **Launcher repo / rev / build jobs** — sm121 is compiled on the Pi
-     from the launcher repo on first boot (default `main`; set a commit
-     hash to pin the binary — changing it recompiles once; `2` jobs so
-     a Pi 4 doesn't OOM under HA).
    - **Extra config (raw TOML)** — appended verbatim to the generated
      config; this is where per-install CREDENTIALS live (e.g. a
      `[mikrotik]` block with its password) — the shared recipe repo's
