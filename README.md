@@ -19,14 +19,20 @@ in the launcher repo.
 
 ## The image
 
-Built by the **launcher repo** (multi-stage: sm121 is compiled
-in-container, so the binary always matches the container architecture):
+Built by the **launcher repo** — a THIN image (debian-slim + git/jq + the
+pinned Rust toolchain; no sm121 binary): the **Pi is the build host**.
+On first boot the entrypoint compiles sm121 from the launcher repo
+(`sm121_launcher_url` @ `sm121_launcher_rev`, cached in the add-on's
+data folder), so the arch always matches (HAOS has no Docker to build
+with) and the binary never goes stale. First boot = a full release
+build (minutes on a Pi 5, longer on a Pi 4; `sm121_build_jobs` defaults
+to 2 so a Pi 4 doesn't OOM under HA).
 
 ```sh
 cd sm121-launcher
 make addon-image   # → sm121-addon:latest
 make addon-push    # → ghcr.io/kilork/sm121-addon:latest  (docker login ghcr.io first)
-scripts/smoke-addon.sh   # entrypoint + file:// recipe repo + curl /api/state
+scripts/smoke-addon.sh   # entrypoint + file:// recipe repo + file:// launcher checkout + curl /api/state
 ```
 
 `config.yaml` pulls `ghcr.io/kilork/sm121-addon`.
@@ -48,6 +54,10 @@ scripts/smoke-addon.sh   # entrypoint + file:// recipe repo + curl /api/state
    - **HA URL / token** — for the launcher's power entities (optional).
    - **Image registry base** — e.g. `ghcr.io/kilork`; enables
      `--image-source registry` pulls of prebuilt images.
+   - **Launcher repo / rev / build jobs** — sm121 is compiled on the Pi
+     from the launcher repo on first boot (default `main`; set a commit
+     hash to pin the binary — changing it recompiles once; `2` jobs so
+     a Pi 4 doesn't OOM under HA).
    - **Extra config (raw TOML)** — appended verbatim to the generated
      config; this is where per-install CREDENTIALS live (e.g. a
      `[mikrotik]` block with its password) — the shared recipe repo's
@@ -79,7 +89,9 @@ The HA host must route to, on the same links the Mac uses today:
 - the **HA REST API** (`sm121_ha_url`/`token`) — power entities
 - the **Mikrotik devices** (RouterOS API, TCP 8728) — graceful router
   power-off
-- the **registry** (ghcr.io) — `--image-source registry` pulls
+- the **registry** (ghcr.io) — the add-on image itself + `--image-source registry` pulls
+- **git.kilork.org + crates.io** — first boot only (the launcher-repo
+  clone + the cargo fetch; both are cached afterwards)
 
 ## The single-launcher rule
 

@@ -51,6 +51,9 @@ options:
   sm121_ha_token: ""
   sm121_registry_base: ""
   sm121_config_extra: ""
+  sm121_launcher_url: "https://git.kilork.org/sm121/sm121-launcher.git"
+  sm121_launcher_rev: "main"
+  sm121_build_jobs: 2
   sm121_repo_resync_minutes: 10
   sm121_web_token: ""
 
@@ -109,6 +112,29 @@ schema:
           password). Kept out of the log.
         type: string
         default: ""
+    - sm121_launcher_url:
+        name: "Launcher repo (sm121 is compiled from it)"
+        description: >-
+          The sm121 launcher is compiled ON THE PI from this repo on first
+          boot (cached in the add-on's data folder) — the image carries no
+          binary, so the arch always matches and the binary never goes
+          stale. A private mirror works too.
+        type: string
+        default: "https://git.kilork.org/sm121/sm121-launcher.git"
+    - sm121_launcher_rev:
+        name: "Launcher rev to compile (branch or commit)"
+        description: >-
+          Default `main` (tracking). Set a commit hash to pin the binary;
+          changing this option recompiles once on the next start.
+        type: string
+        default: "main"
+    - sm121_build_jobs:
+        name: "Compile parallelism (cargo -j)"
+        description: >-
+          Jobs for the first-boot compile (default 2 — a Pi 4 must not OOM
+          under HA; a Pi 5 can use 4).
+        type: int
+        default: 2
     - sm121_repo_resync_minutes:
         name: "Recipe-repo re-sync interval (minutes)"
         description: "How often the background supervisor re-pulls the recipe repos (default 10)."
