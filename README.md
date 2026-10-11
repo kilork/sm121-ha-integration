@@ -13,37 +13,44 @@ in the launcher repo.
 
 | File | What |
 |------|------|
-| `config.yaml` | the HA add-on manifest (options schema → the entrypoint's env vars) |
-| `Dockerfile` | reference build (the image is built by the launcher repo) |
+| `repository.json` | HA **add-on store** manifest — HA installs this add-on from this repo |
+| `sm121/config.yaml` | the HA add-on manifest (options schema → the entrypoint's env vars) |
+| `sm121/Dockerfile` + `sm121/rootfs/` | the thin image (no sm121 binary, no toolchain) + the entrypoint |
+| `.github/workflows/` | GitHub Actions (the `home-assistant/builder` actions, same pattern as `kilork/cups-addon`): builds each arch natively, pushes `ghcr.io/kilork/sm121-addon` via OIDC — **no `docker login` anywhere** |
 | `custom_components/sm121/` | **superseded** custom-integration prototype (commit `1ccd032`) — kept as reference; HA *entities* are a phase-2 nicety over the add-on's REST API |
 
 ## The image
 
-Built by the **launcher repo** — a THIN image (debian-slim + git/jq + the
-pinned Rust toolchain; no sm121 binary): the **Pi is the build host**.
-On first boot the entrypoint compiles sm121 from the launcher repo
-(`sm121_launcher_url` @ `sm121_launcher_rev`, cached in the add-on's
-data folder), so the arch always matches (HAOS has no Docker to build
-with) and the binary never goes stale. First boot = a full release
-build (minutes on a Pi 5, longer on a Pi 4; `sm121_build_jobs` defaults
-to 2 so a Pi 4 doesn't OOM under HA).
+A THIN image (debian-slim + git/jq/curl/gcc; ~250 MB, small enough for
+GHCR's free tier): the **Pi is the build host**. On first boot the
+entrypoint installs rustup (cached in the add-on's data folder) and
+compiles sm121 from the launcher repo (`sm121_launcher_url` @
+`sm121_launcher_rev`), so the arch always matches (HAOS has no Docker to
+build with) and the binary never goes stale. First boot = toolchain
+download + a full release build (minutes on a Pi 5, longer on a Pi 4;
+`sm121_build_jobs` defaults to 2 so a Pi 4 doesn't OOM under HA).
+
+**Built by GitHub Actions** (on push to `main`): one native build per
+arch in `config.yaml` (aarch64 + amd64) → `ghcr.io/kilork/sm121-addon`
+(`:latest` + `:1.0.0`) + the multi-arch manifest. Pushing needs no
+credentials (OIDC `GITHUB_TOKEN`) — but the GHCR package is created
+**private** on first push: set it *public* in the GitHub UI once, so HA
+can pull it anonymously.
+
+Local dev / smoke (no CI needed):
 
 ```sh
-cd sm121-launcher
-make addon-image   # → sm121-addon:latest
-make addon-push    # → ghcr.io/kilork/sm121-addon:latest  (docker login ghcr.io first)
-scripts/smoke-addon.sh   # entrypoint + file:// recipe repo + file:// launcher checkout + curl /api/state
+docker build -t sm121-addon:latest sm121/    # from this repo
+# launcher repo: scripts/smoke-addon.sh   # entrypoint + file:// recipe repo + file:// launcher checkout + curl /api/state
 ```
-
-`config.yaml` pulls `ghcr.io/kilork/sm121-addon`.
 
 ## Install
 
-1. `make addon-push` from the launcher repo (after any launcher change).
-2. In HA: *Settings → Add-ons & Storage → Add-on Store* → install the
-   add-on from this repo (HAOS add-on: copy this directory into
-   `/addon/sm121/` on the HA host, or use the add-on builder for a
-   local store entry).
+1. Push to `main` (CI builds + publishes the image); set the GHCR
+   package `sm121-addon` to *public* (first time only).
+2. In HA: *Settings → Add-ons & Storage → Add-on Store → (⚙) → Add
+   repository* → `https://github.com/kilork/sm121-ha-integration`,
+   then install **sm121**.
 3. *Options*:
    - **Recipe repos** — ordered `{url, token}` list; the **first entry
      wins on a recipe-name collision** (production first, playground

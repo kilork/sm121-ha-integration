@@ -17,14 +17,13 @@ version: "1.0.0"
 slug: "sm121"
 
 image: "ghcr.io/kilork/sm121-addon"
-# aarch64 today: the image is built on an arm64 host (the Mac / a DGX node —
-# the multi-stage Dockerfile compiles sm121 in-container, so the binary
-# always matches the build host's arch, and that IS the Pi's arch).
-# Add x86_64 back only after a multi-arch buildx push
-# (`docker buildx build --platform linux/aarch64,linux/x86_64 --push` —
-# needs qemu binfmt on the builder).
+# Both archs: the image is arch-generic (no sm121 binary, no toolchain —
+# the entrypoint compiles sm121 for the container's own arch on first
+# boot). GitHub Actions builds each arch natively (this repo's
+# .github/workflows/) and publishes the multi-arch manifest.
 arch:
   - aarch64
+  - amd64
 
 # The dashboard; host_access exposes it on the HA host's port 3100.
 ports:
