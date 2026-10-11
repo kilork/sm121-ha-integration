@@ -1,3 +1,3 @@
-__pycache__/
-*.pyc
-.venv/
+# Transient build inputs — CI clones the launcher repo here
+# (actions/checkout), and the local Makefile rsyncs it. Never commit.
+launcher-src/
