@@ -46,8 +46,6 @@ options:
   sm121_recipe_repos: []
   sm121_ssh_user: ""
   sm121_ssh_key_b64: ""
-  sm121_base_config: ""
-  sm121_base_config_token: ""
   sm121_ha_url: ""
   sm121_ha_token: ""
   sm121_registry_base: ""
@@ -90,23 +88,6 @@ schema:
           never baked into the image.
         type: string
         default: ""
-    - sm121_base_config:
-        name: "Cluster config repo (private git URL)"
-        description: >-
-          A PRIVATE repo (e.g. git.kilork.org/sm121/cluster-config) whose
-          config.toml is the base config: [[clusters]]/nccl (private IPs —
-          never in the public recipe repo) + cluster-side secrets
-          ([home_assistant], [mikrotik]). Fetched at boot; leave empty to
-          run without a base config.
-        type: string
-        default: ""
-    - sm121_base_config_token:
-        name: "Cluster config repo token (Gitea PAT)"
-        description: >-
-          Read-access PAT for the cluster config repo (embedded in the clone
-          URL, kept out of the log). Empty for a public repo.
-        type: string
-        default: ""
     - sm121_ha_url:
         name: "Home Assistant URL (for power entities)"
         description: "The HA REST endpoint the launcher uses for power on/off (optional)."
@@ -122,12 +103,14 @@ schema:
         type: string
         default: ""
     - sm121_config_extra:
-        name: "Extra config (raw TOML)"
+        name: "Cluster config (raw TOML)"
         description: >-
-          Raw TOML appended to the generated config, verbatim — for
-          per-install settings that carry credentials and must not go into
-          the shared recipe repo (e.g. a [mikrotik] block with its
-          password). Kept out of the log.
+          Raw TOML appended to the generated config, verbatim — this is
+          where the CLUSTER CONFIG lives: [[clusters]]/nccl (private IPs —
+          never in the public recipe repo) + [home_assistant] + [mikrotik]
+          + [registry]. Stored in HA's own option storage (private, on the
+          Pi); kept out of the log. If it carries [home_assistant] /
+          [registry], leave the matching flat options empty.
         type: string
         default: ""
     - sm121_launcher_url:

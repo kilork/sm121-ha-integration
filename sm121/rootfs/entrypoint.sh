@@ -2,10 +2,11 @@
 # sm121 HA add-on entrypoint (specs/tech-architecture/ha-addon-recipe-repos.md):
 #
 #   1. write the effective /etc/sm121/config.toml from the add-on options
-#      (env vars); an optional base config at /etc/sm121/base.toml (e.g. a
-#      recipe repo's config.toml, mounted) carries the cluster definitions
-#      — the generated sections (recipe_repos / home_assistant / registry)
-#      are APPENDED, so the base must not define them
+#      (env vars); an optional base config at /etc/sm121/base.toml (e.g.
+#      mounted in the standalone flow) — the generated sections are
+#      APPENDED, so the base must not define them. The CLUSTER CONFIG
+#      (private IPs) is NOT a file/repo: it is the sm121_config_extra
+#      option (raw TOML) — HA option storage is private and on the Pi.
 #   2. drop the SSH key (a mounted secret) at SM121_SSH_KEY_PATH
 #   3. sync the recipe repos (clone/pull)
 #   4. run `sm121 web` on 3100; a supervisor loop re-syncs the repos every
@@ -14,20 +15,20 @@
 # Env (the add-on options — HA maps each `sm121_*` option to the
 # uppercased env var; the standalone flow sets the same names directly):
 #   SM121_RECIPE_REPOS        JSON list of {"url","token"} → [[recipe_repos]]
-#   SM121_BASE_CONFIG_URL   private cluster-config repo (git URL) — its
-#                           config.toml (clusters + cluster-side secrets)
-#                           becomes the base config, fetched at boot
-#   SM121_BASE_CONFIG_TOKEN Gitea PAT for that repo (embedded in the clone
-#                           URL, never logged)
 #   SM121_SSH_USER            ssh_user
 #   SM121_SSH_KEY_B64         base64 private key (HA option; written to KEY_PATH)
 #   SM121_SSH_KEY             path to a mounted private key (docker secret mount)
 #   SM121_SSH_KEY_PATH        where the key lands (default /etc/sm121/ssh_key)
 #   SM121_HA_URL / SM121_HA_TOKEN   → [home_assistant]
 #   SM121_REGISTRY_BASE       → [registry] base (for --image-source registry)
-#   SM121_CONFIG_EXTRA        raw TOML appended verbatim (per-install
-#                             credentials that must not live in the shared
-#                             repo, e.g. a [mikrotik] block with its password)
+#   SM121_CONFIG_EXTRA        raw TOML appended verbatim — THE CLUSTER
+#                             CONFIG lives here ([[clusters]]/nccl with the
+#                             private IPs, [home_assistant], [mikrotik]):
+#                             a HA option = private, on the Pi, never in
+#                             the public recipe repo. If it carries
+#                             [home_assistant]/[registry], leave the
+#                             matching flat options empty (duplicate TOML
+#                             tables fail the parse). Kept out of the log.
 #   SM121_LAUNCHER_URL        launcher repo (default git.kilork.org/sm121/
 #                             sm121-launcher) — sm121 is COMPILED from it on
 #                             first boot (the Pi is the build host)
@@ -46,24 +47,11 @@ CONFIG=/etc/sm121/config.toml
 mkdir -p /etc/sm121
 
 # --- 1. the effective config --------------------------------------------------
-# Base config: an optional PRIVATE cluster-config repo (SM121_BASE_CONFIG_URL,
-# e.g. git.kilork.org/sm121/cluster-config) — its config.toml carries the
-# [[clusters]]/nccl definitions + cluster-side secrets ([home_assistant],
-# [mikrotik]); the public recipe repo deliberately has none. The token is
-# embedded in the clone URL and the URL is never logged.
-if [ -n "${SM121_BASE_CONFIG_URL:-}" ]; then
-  BASE_URL="$SM121_BASE_CONFIG_URL"
-  if [ -n "${SM121_BASE_CONFIG_TOKEN:-}" ]; then
-    case "$BASE_URL" in
-      https://*) BASE_URL="https://git:${SM121_BASE_CONFIG_TOKEN}@${BASE_URL#https://}" ;;
-    esac
-  fi
-  BASE_SRC="$(mktemp -d)"
-  git clone -q --depth 1 "$BASE_URL" "$BASE_SRC"
-  cp "$BASE_SRC/config.toml" /etc/sm121/base.toml
-  rm -rf "$BASE_SRC"
-  echo "sm121: base config fetched (clusters: $(grep -c '^\[\[clusters\]\]' /etc/sm121/base.toml))"
-fi
+# Base: an optional /etc/sm121/base.toml (standalone/docker-secret flow).
+# The CLUSTER CONFIG for the HA flow is NOT a repo or file — it is the
+# sm121_config_extra option (raw TOML, appended below): [[clusters]]/nccl
+# carry private IPs, so they live in HA's own option storage (private,
+# on the Pi), never in the public recipe repo.
 if [ -f /etc/sm121/base.toml ]; then
   cp /etc/sm121/base.toml "$CONFIG"
 else

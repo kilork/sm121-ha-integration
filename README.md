@@ -20,10 +20,12 @@ in the launcher repo.
 | `custom_components/sm121/` | **superseded** custom-integration prototype (commit `1ccd032`) — kept as reference; HA *entities* are a phase-2 nicety over the add-on's REST API |
 
 **Cluster config is NOT in the (public) recipe repo** — it carries
-private network details. It lives in the **private**
-`git.kilork.org/sm121/cluster-config` repo, fetched at boot via the
-`sm121_base_config` (+ `sm121_base_config_token`) options and used as the
-base config (a private repo may carry `[home_assistant]` / `[mikrotik]`).
+private network details. It is supplied as the **`sm121_config_extra`
+add-on option** (raw TOML, appended to the generated config):
+`[[clusters]]`/nccl + `[home_assistant]` + `[mikrotik]` live in HA's own
+option storage — private, on the Pi; no second repo, no PAT. If that TOML
+contains `[home_assistant]`/`[registry]`, leave the matching flat options
+empty (duplicate TOML tables fail the parse).
 
 ## The image
 
@@ -64,9 +66,10 @@ docker build -t sm121-addon:latest sm121/    # from this repo
    - **SSH user** + **SSH private key (base64)** — `base64 -i
      ~/.ssh/id_ed25519`; written to `/etc/sm121/ssh_key` (chmod 600) in
      the container, never baked into the image.
-   - **Cluster config repo** (private git URL + PAT) — the base config
-     (clusters/nccl with the private IPs + `[home_assistant]` /
-     `[mikrotik]`), fetched at boot from `git.kilork.org/sm121/cluster-config`.
+   - **Cluster config (raw TOML)** — `sm121_config_extra`: the
+     `[[clusters]]`/nccl definitions (private IPs — never in the public
+     recipe repo) + `[home_assistant]` + `[mikrotik]`. Stored in HA's
+     option storage (private, on the Pi).
    - **HA URL / token** — for the launcher's power entities (optional).
    - **Image registry base** — e.g. `ghcr.io/kilork`; enables
      `--image-source registry` pulls of prebuilt images.
