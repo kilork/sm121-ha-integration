@@ -1,0 +1,122 @@
+# sm121 — Home Assistant add-on manifest.
+#
+# Runs the sm121 launcher (the DGX Spark cluster launcher) 24/7 as a
+# container: it clones/pulls the configured git recipe repos, keeps them
+# fresh (a supervisor re-sync loop), and serves the `sm121 web` dashboard
+# on port 3100 — serve/stop/power from the browser, no Mac involved.
+#
+# The image is built by the launcher repo (`make addon-image`,
+# multi-stage, compiles sm121 in-container) and pushed with
+# `make addon-push` to the [registry] base (ghcr.io/kilork).
+#
+# Design: specs/tech-architecture/ha-addon-recipe-repos.md (launcher repo).
+
+name: "sm121"
+description: "sm121 DGX Spark launcher — recipe-repo sync + the sm121 web dashboard (serve/stop/power)"
+version: "1.0.0"
+slug: "sm121"
+
+image: "ghcr.io/kilork/sm121-addon"
+arch:
+  - aarch64
+  - x86_64
+
+# The dashboard; host_access exposes it on the HA host's port 3100.
+ports:
+  - "3100:3100/tcp"
+ports_description:
+  "3100": "sm121 dashboard"
+host_access: true
+
+environment:
+  - SM121_WEB_PORT=3100
+
+startup: "once"
+boot: "always"
+reboot: "always"
+
+# The add-on options map 1:1 to the entrypoint's env vars (option name
+# uppercased): sm121_recipe_repos → SM121_RECIPE_REPOS (JSON list of
+# {url, token}), etc. See docker-images/sm121-addon/entrypoint.sh.
+options:
+  sm121_recipe_repos: []
+  sm121_ssh_user: ""
+  sm121_ssh_key_b64: ""
+  sm121_ha_url: ""
+  sm121_ha_token: ""
+  sm121_registry_base: ""
+  sm121_config_extra: ""
+  sm121_repo_resync_minutes: 10
+  sm121_web_token: ""
+
+schema:
+  sm121:
+    - sm121_recipe_repos:
+        name: "Recipe repos (ordered; first wins on a recipe-name collision)"
+        description: >-
+          Git recipe repos, highest priority first, e.g.
+          production then playground. Each entry: {url, token} — the token
+          is a deploy key / PAT for private repos (empty for public).
+        type: list
+        default: []
+        editor:
+          type: object
+          fields:
+            - url:
+                required: true
+                type: string
+            - token:
+                type: string
+                default: ""
+    - sm121_ssh_user:
+        name: "SSH user (cluster nodes)"
+        description: "The ssh_user the launcher uses to reach the DGX nodes."
+        type: string
+        default: ""
+    - sm121_ssh_key_b64:
+        name: "SSH private key (base64)"
+        description: >-
+          base64 of the private key file (e.g. `base64 -i ~/.ssh/id_ed25519`).
+          Written to /etc/sm121/ssh_key (chmod 600) inside the container —
+          never baked into the image.
+        type: string
+        default: ""
+    - sm121_ha_url:
+        name: "Home Assistant URL (for power entities)"
+        description: "The HA REST endpoint the launcher uses for power on/off (optional)."
+        type: string
+        default: ""
+    - sm121_ha_token:
+        name: "Home Assistant token"
+        type: string
+        default: ""
+    - sm121_registry_base:
+        name: "Image registry base"
+        description: "e.g. ghcr.io/kilork — enables --image-source registry pulls (optional)."
+        type: string
+        default: ""
+    - sm121_config_extra:
+        name: "Extra config (raw TOML)"
+        description: >-
+          Raw TOML appended to the generated config, verbatim — for
+          per-install settings that carry credentials and must not go into
+          the shared recipe repo (e.g. a [mikrotik] block with its
+          password). Kept out of the log.
+        type: string
+        default: ""
+    - sm121_repo_resync_minutes:
+        name: "Recipe-repo re-sync interval (minutes)"
+        description: "How often the background supervisor re-pulls the recipe repos (default 10)."
+        type: int
+        default: 10
+        constraints:
+          inclusive_min: 1
+          inclusive_max: 1440
+    - sm121_web_token:
+        name: "Dashboard bearer token"
+        description: >-
+          REQUIRED — the dashboard binds 0.0.0.0 and refuses to serve the
+          data endpoints without a bearer token. Use it in the browser:
+          http://<ha-host>:3100 (the UI asks for / carries the token).
+        type: string
+        default: ""
