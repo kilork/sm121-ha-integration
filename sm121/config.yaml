@@ -29,23 +29,23 @@ arch:
   - aarch64
   - amd64
 
-# The dashboard; host_access exposes it on the HA host's port 3100.
+# The dashboard; host_network exposes it on the HA host's port 3100.
+# Apps-framework dict forms (this HA generation's supervisor rejects the
+# legacy list forms — see the store log: "expected a dictionary for
+# data['environment']/data['ports']").
 ports:
-  - "3100:3100/tcp"
+  3100/tcp: 3100
 ports_description:
-  "3100": "sm121 dashboard"
-host_access: true
+  3100/tcp: "sm121 dashboard"
+host_network: true
 
 environment:
-  - SM121_WEB_PORT=3100
+  SM121_WEB_PORT: "3100"
 
-# Apps-framework lifecycle (this HA generation's supervisor validates
-# `startup`/`boot` against the Apps schema — the legacy "once"/"always"
-# values are rejected and the add-on silently disappears from the store):
-# startup=services (start when core services are up, like cups-addon),
-# boot=auto (start at HA boot — the 24/7 service behaviour).
+# Apps-framework lifecycle (mirror the working cups-addon manifest):
+# startup=services — start when core services are up; no `boot` field —
+# the Apps default (auto) starts it at HA boot: the 24/7 service behaviour.
 startup: "services"
-boot: "auto"
 
 # The add-on options map 1:1 to the entrypoint's env vars (option name
 # uppercased): sm121_recipe_repos → SM121_RECIPE_REPOS (a JSON STRING:
