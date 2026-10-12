@@ -78,6 +78,8 @@ jobs:
     permissions:
       packages: write
     steps:
+      - uses: actions/checkout@v4
+
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -90,7 +92,7 @@ jobs:
 
       - name: Compose the multi-arch manifest
         run: |
-          docker buildx imagetools create --remove \
+          docker buildx imagetools create \
             -t ghcr.io/kilork/sm121-addon:latest \
             -t ghcr.io/kilork/sm121-addon:${{ steps.ver.outputs.version }} \
             ghcr.io/kilork/aarch64-sm121-addon:latest \
