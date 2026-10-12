@@ -43,6 +43,22 @@ set -eu
 CONFIG=/etc/sm121/config.toml
 mkdir -p /etc/sm121
 
+# --- 0. HA options (the Apps framework does NOT inject env vars) ---------------
+# The supervisor writes the add-on options to /data/options.json; env-var
+# injection is legacy-app only (supervisor/docker/app.py: "Provide options
+# for legacy apps"). Read the file and export SM121_* — an explicitly set
+# env var (the standalone docker flow) wins.
+OPTS=/data/options.json
+if [ -s "$OPTS" ]; then
+  for key in sm121_recipe_repos sm121_ssh_user sm121_ssh_key_b64 sm121_ha_url \
+             sm121_ha_token sm121_registry_base sm121_config_extra \
+             sm121_repo_resync_minutes sm121_web_token; do
+    var=$(printf '%s' "$key" | tr '[:lower:]' '[:upper:]')
+    val="$(jq -r --arg k "$key" '.[$k] // empty' "$OPTS")"
+    if [ -n "$val" ]; then export "$var=$val"; fi
+  done
+fi
+
 # --- 1. the effective config --------------------------------------------------
 # Base: an optional /etc/sm121/base.toml (standalone/docker-secret flow).
 # The CLUSTER CONFIG for the HA flow is NOT a repo or file — it is the
