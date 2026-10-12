@@ -43,6 +43,12 @@ set -eu
 CONFIG=/etc/sm121/config.toml
 mkdir -p /etc/sm121
 
+# The SSH key lands here (the add-on data dir is not persisted for /etc —
+# a fresh file is written from the option on every boot); export it so the
+# config generation below emits `ssh_key_path` (run_ssh refuses without it).
+KEY_PATH="${SM121_SSH_KEY_PATH:-/etc/sm121/ssh_key}"
+export SM121_SSH_KEY_PATH="$KEY_PATH"
+
 # --- 0. HA options (the Apps framework does NOT inject env vars) ---------------
 # The supervisor writes the add-on options to /data/options.json; env-var
 # injection is legacy-app only (supervisor/docker/app.py: "Provide options
@@ -105,11 +111,10 @@ fi
 # --- 2. the SSH key ------------------------------------------------------------
 # HA add-on options cannot mount files: the key arrives base64-encoded as
 # SM121_SSH_KEY_B64 (the `sm121_ssh_key_b64` option) and is written to
-# SM121_SSH_KEY_PATH (default /etc/sm121/ssh_key). A plain file path
-# (SM121_SSH_KEY, e.g. a docker secret mount) is also accepted.
-KEY_PATH="${SM121_SSH_KEY_PATH:-/etc/sm121/ssh_key}"
+# KEY_PATH (exported as SM121_SSH_KEY_PATH above — default
+# /etc/sm121/ssh_key). A plain file path (SM121_SSH_KEY, e.g. a docker
+# secret mount) is also accepted.
 if [ -n "${SM121_SSH_KEY_B64:-}" ]; then
-  mkdir -p "$(dirname "$KEY_PATH")"
   printf '%s' "$SM121_SSH_KEY_B64" | base64 -d > "$KEY_PATH"
   chmod 600 "$KEY_PATH"
 elif [ -n "${SM121_SSH_KEY:-}" ] && [ -f "$SM121_SSH_KEY" ]; then
