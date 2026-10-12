@@ -29,8 +29,12 @@ jobs:
     name: Build ${{ matrix.arch }}
     strategy:
       matrix:
-        arch: [aarch64, amd64]
-    runs-on: ubuntu-${{ matrix.arch }}
+        include:
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+          - arch: amd64
+            runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
