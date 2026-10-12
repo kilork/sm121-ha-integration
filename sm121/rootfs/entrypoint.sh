@@ -46,6 +46,14 @@ set -eu
 CONFIG=/etc/sm121/config.toml
 mkdir -p /etc/sm121
 
+# Persist the sm121 cache (the recipe-repo checkouts) in the add-on's data
+# dir: HOME=/root is container-ephemeral in HAOS — without this, every
+# recreate re-clones the whole recipes repo before the web can start.
+# /etc/sm121 (the regenerated config + key) stays where it is.
+if [ -d /data ]; then
+  export HOME=/data
+fi
+
 # The SSH key lands here (the add-on data dir is not persisted for /etc —
 # a fresh file is written from the option on every boot); export it so the
 # config generation below emits `ssh_key_path` (run_ssh refuses without it).
