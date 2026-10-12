@@ -87,7 +87,15 @@ scripts/smoke-addon.sh    # entrypoint + file:// recipe repo + curl /api/state
    - **Re-sync interval** — the background supervisor re-pulls the recipe
      repos every N minutes (new recipes land without a restart).
    - **Dashboard bearer token** — required (the dashboard binds
-     `0.0.0.0` and refuses to serve data endpoints without one).
+     `0.0.0.0` and refuses to serve data endpoints without one). The
+     browser keeps the token in localStorage and sends it as an
+     `Authorization: Bearer` header; `POST /api/login` exchanges it for a
+     HttpOnly session cookie that covers the SSE stream and the recipes
+     iframe — the token never appears in a URL.
+   - **Insecure mode** — `sm121_insecure: true` runs the dashboard
+     UNAUTHENTICATED (the token check is skipped entirely). For isolated
+     LANs where the operator accepts that anyone on the network can
+     serve/stop/power the cluster.
 4. Start the add-on; open `http://<ha-host>:3100` with the token.
 
 The entrypoint: (1) writes the effective `config.toml` from the options

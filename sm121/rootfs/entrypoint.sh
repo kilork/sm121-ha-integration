@@ -32,7 +32,10 @@
 #   SM121_REPO_RESYNC_MINUTES background re-sync interval (default 10)
 #   SM121_WEB_PORT            dashboard port (default 3100)
 #   SM121_WEB_BIND            dashboard bind (default 0.0.0.0)
-#   SM121_WEB_TOKEN           bearer token (REQUIRED for a non-loopback bind)
+#   SM121_WEB_TOKEN           bearer token (REQUIRED for a non-loopback bind,
+#                             unless SM121_INSECURE)
+#   SM121_INSECURE            true → run the dashboard unauthenticated
+#                             (--insecure; isolated LANs only)
 #
 # The sm121 binary ships IN THE IMAGE (CI compiles it from the launcher
 # repo per arch — see .github/workflows/build-addon.yaml + Dockerfile).
@@ -139,7 +142,17 @@ INTERVAL="${SM121_REPO_RESYNC_MINUTES:-10}"
 # A web crash exits the container; the HA restart policy (always) re-runs
 # this entrypoint (re-sync + fresh dashboard). No state is lost (the run
 # ledger lives in the recipe repos, the cache in ~/.cache/sm121).
+#
+# SM121_INSECURE (the `sm121_insecure` option): run the dashboard with NO
+# authentication — anyone who can reach port 3100 can serve/stop/power the
+# cluster. For isolated LANs only; the server logs a loud warning.
+WEB_FLAGS=""
+if [ "${SM121_INSECURE:-false}" = "true" ] || [ "${SM121_INSECURE:-}" = "1" ]; then
+  WEB_FLAGS="--insecure"
+  echo "WARNING: sm121 web starts in INSECURE mode — the dashboard is unauthenticated"
+fi
 exec $SM121 web \
   --port "${SM121_WEB_PORT:-3100}" \
   --bind "${SM121_WEB_BIND:-0.0.0.0}" \
+  $WEB_FLAGS \
   ${SM121_WEB_TOKEN:+--token "$SM121_WEB_TOKEN"}
