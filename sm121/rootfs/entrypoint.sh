@@ -29,7 +29,9 @@
 #                             [home_assistant]/[registry], leave the
 #                             matching flat options empty (duplicate TOML
 #                             tables fail the parse). Kept out of the log.
-#   SM121_REPO_RESYNC_MINUTES background re-sync interval (default 10)
+#   SM121_REPO_RESYNC_MINUTES background recipe-repo re-sync interval in
+#                             minutes, passed to web as --repo-sync-interval
+#                             (default 10; 0 disables)
 #   SM121_WEB_PORT            dashboard port (default 3100)
 #   SM121_WEB_BIND            dashboard bind (default 0.0.0.0)
 #   SM121_WEB_TOKEN           bearer token (REQUIRED for a non-loopback bind,
@@ -133,19 +135,15 @@ elif [ -n "${SM121_SSH_KEY:-}" ] && [ -f "$SM121_SSH_KEY" ]; then
   chmod 600 "$KEY_PATH"
 fi
 
-# --- 3 + 4. sync + web, with the re-sync supervisor ----------------------------
+# --- 3 + 4. sync + web -----------------------------------------------------------
 # The sm121 binary is baked into the image (CI-compiled per arch — see
 # the Dockerfile); first boot is just a recipe-repo sync: seconds.
 SM121="/usr/local/bin/sm121 --config $CONFIG"
-$SM121 repos sync || echo "warning: initial repo sync failed (the supervisor retries)"
+$SM121 repos sync || echo "warning: initial repo sync failed (web's resync loop retries)"
 
-INTERVAL="${SM121_REPO_RESYNC_MINUTES:-10}"
-(
-  while :; do
-    sleep "$((INTERVAL * 60))"
-    $SM121 repos sync || true
-  done
-) &
+# Background re-sync: the web server hosts the loop (sm121 web
+# --repo-sync-interval) — the old entrypoint subshell loop is gone.
+RESYNC_INTERVAL="${SM121_REPO_RESYNC_MINUTES:-10}"
 
 # A web crash exits the container; the HA restart policy (always) re-runs
 # this entrypoint (re-sync + fresh dashboard). No state is lost (the run
@@ -162,5 +160,6 @@ fi
 exec $SM121 web \
   --port "${SM121_WEB_PORT:-3100}" \
   --bind "${SM121_WEB_BIND:-0.0.0.0}" \
+  --repo-sync-interval "$RESYNC_INTERVAL" \
   $WEB_FLAGS \
   ${SM121_WEB_TOKEN:+--token "$SM121_WEB_TOKEN"}
