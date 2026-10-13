@@ -33,7 +33,7 @@ COPY launcher-src/ /src/
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/build/target \
     cd /src \
-    && env CARGO_TARGET_DIR=/build/target cargo build --release \
+    && env CARGO_TARGET_DIR=/build/target cargo build --release --features mimalloc \
     && mkdir -p /out \
     && cp /build/target/release/sm121 /out/sm121
 
