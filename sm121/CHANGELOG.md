@@ -6,6 +6,18 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.3
+
+- **Fixed: the recipes panel kept lanes "active" after they were stopped.** The
+  panel only refreshed when a report file changed, while `serve`/`stop` rewrite
+  the recipe's run ledger (`.lock`) — so a stopped lane stayed green (or orange
+  "stale") until some bench produced a report. The ledger now triggers a
+  refresh, and the 30-second tick compares the panel's state against the ledger
+  and re-checks the fleet, so a stopped lane disappears within half a minute.
+  The stale/up flags are also recomputed each pass instead of sticking — which
+  matters most on the add-on machine, where the live fleet probe is the only
+  running signal.
+
 ## 1.3.2
 
 - **Recipe hooks live with the recipe.** A `before_serve` / `after_stop` entry
