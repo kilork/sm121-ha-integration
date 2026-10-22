@@ -6,6 +6,18 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.4
+
+- **New: the recipes panel's Model column has the same hover buttons as the
+  recipe name.** `⧉` copies the model id (handy for `hf download`, provider
+  configs, or a bench command), and `HF` opens the checkpoint's page on
+  Hugging Face in a new tab. The Hub link only appears for Hub repo ids
+  (`org/name`) — a recipe pointing at a local model path shows the copy button
+  alone. Clicking either button no longer expands or collapses the row, and the
+  model column reserves room so long ids do not run under the buttons.
+- **New: the dashboard and the recipes page now carry an icon**, so the browser
+  tab is identifiable and no `/favicon.ico` request is made.
+
 ## 1.3.3
 
 - **Fixed: the recipes panel kept lanes "active" after they were stopped.** The
