@@ -6,6 +6,15 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.8
+
+- **Fixed: the version badge showed `vdev` in 1.3.6 and 1.3.7.** The build arg
+  reached the builder, but cargo kept a cached compilation of the crate (the
+  add-on build mounts `target/` as a cache) and `option_env!` is not a rebuild
+  input on its own. The launcher now declares
+  `cargo:rerun-if-env-changed=SM121_VERSION`, so the version is compiled in
+  whenever it changes — the badge reports the real release.
+
 ## 1.3.7
 
 - **Fixed: 1.3.6's version badge read `vdev`.** The image build passed the
