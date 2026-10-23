@@ -6,6 +6,14 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.11
+
+- Follow-up to 1.3.10: the recipes panel now reads the repo cache **at
+  startup** (no 30-second empty window) and only for repos you have actually
+  configured, so a leftover clone of a repo you removed never reappears. The
+  status chip distinguishes "N cached (none configured)" from "no recipe repos
+  configured".
+
 ## 1.3.10
 
 - **Fixed: recipes that were cloned after the dashboard started never showed
