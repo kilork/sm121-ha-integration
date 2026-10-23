@@ -6,6 +6,22 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.12
+
+- **The notification bell now opens under the bell** (it used to appear at the
+  far right edge of the toolbar) and clicks through to the recipe it mentions:
+  the row is expanded, scrolled to and flashed so you can find it in a long
+  table.
+- **Sync messages moved into the notifications** instead of sitting in the
+  toolbar: a manual sync reports what it did (per-repo result, git error when a
+  clone fails), and the panel only speaks up on startup when something is
+  actually wrong.
+- **Notifications say what changed** — a new recipe (with its model), a serve
+  starting or stopping, a new bench, a changed recipe config, a removal.
+- **Fixed: the Uptime column was always "—" on a machine with no run ledger**
+  (i.e. the add-on). The fleet probe now reads each container's creation time,
+  so uptime is real, and a running row shows "up since …" on hover.
+
 ## 1.3.11
 
 - Follow-up to 1.3.10: the recipes panel now reads the repo cache **at
