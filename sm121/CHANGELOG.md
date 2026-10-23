@@ -6,6 +6,20 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.10
+
+- **Fixed: recipes that were cloned after the dashboard started never showed
+  up.** The dashboard kept the recipe search path it computed at startup, so a
+  repo cloned later (the ⟳ sync button, the background re-sync, or a first boot
+  whose initial sync failed) landed on disk while the recipe table stayed empty
+  — the logs looked perfectly healthy, and even a manual sync did not help. The
+  dashboard now picks up the repo cache on its own and re-reads the recipes
+  after each re-sync.
+- **New: the recipes panel tells you why it is empty.** Next to the ⟳ button
+  there is now a repo status (`repos: 2 synced`, `2/2 repo(s) not synced`,
+  `no recipe repos configured`), and a manual sync reports per-repo results
+  including the git error when a clone fails.
+
 ## 1.3.9
 
 - **Fixed: the version badge (again) — 1.3.6–1.3.8 all read `vdev`.** The build
