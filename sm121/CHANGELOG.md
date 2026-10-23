@@ -6,6 +6,16 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.5
+
+- **Rebuild of 1.3.4 — the 1.3.4 image was built from a launcher commit that
+  never reached the public repo, so it shipped without the new panel buttons and
+  without the icon.** Nothing else changed: if you installed 1.3.4 and saw no
+  `HF` / `⧉` buttons in the recipes panel's Model column and no tab icon, this
+  is the fix. The image is now built from launcher `4c4e608` (verified by
+  `strings /usr/local/bin/sm121` inside the published image), and the tab icon
+  plus the model-column copy/Hugging Face buttons are present.
+
 ## 1.3.4
 
 - **New: the recipes panel's Model column has the same hover buttons as the
