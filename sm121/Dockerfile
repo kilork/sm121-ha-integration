@@ -25,6 +25,8 @@
 # launcher checkout at launcher-src/ (actions/checkout, second checkout).
 
 FROM rust:1.98.1-alpine3.22 AS builder
+# The add-on version, baked into the binary so the dashboard can show it.
+ARG SM121_VERSION=dev
 COPY launcher-src/ /src/
 # Cache mounts are EPHEMERAL (detached after the RUN), so the cargo
 # target dir lives on a cache mount and the finished binary is copied to
@@ -33,7 +35,7 @@ COPY launcher-src/ /src/
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/build/target \
     cd /src \
-    && env CARGO_TARGET_DIR=/build/target cargo build --release --features mimalloc \
+    && env CARGO_TARGET_DIR=/build/target SM121_VERSION=$SM121_VERSION cargo build --release --features mimalloc \
     && mkdir -p /out \
     && cp /build/target/release/sm121 /out/sm121
 

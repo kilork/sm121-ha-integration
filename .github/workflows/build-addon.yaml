@@ -65,6 +65,9 @@ jobs:
               || 'linux/amd64'
             }}
           push: true
+          # baked into the binary: the dashboard shows it under the title
+          build-args: |
+            SM121_VERSION=${{ steps.ver.outputs.version }}
           cache-from: type=gha,name=sm121-${{ matrix.arch }}
           cache-to: type=gha,mode=max,name=sm121-${{ matrix.arch }}
           tags: |

@@ -20,7 +20,7 @@
 
 name: "sm121"
 description: "sm121 DGX Spark launcher — recipe-repo sync + the sm121 web dashboard (serve/stop/power)"
-version: "1.3.5"
+version: "1.3.6"
 slug: "sm121"
 
 image: "ghcr.io/kilork/sm121-addon"
@@ -41,6 +41,10 @@ ports:
 ports_description:
   3100/tcp: "sm121 dashboard"
 host_network: true
+
+# "OPEN WEB UI" button on the add-on page (and the sidebar entry when the
+# supervisor shows panels): the dashboard listens on 3100 directly.
+webui: "http://[HOST]:[PORT:3100]/"
 
 environment:
   SM121_WEB_PORT: "3100"

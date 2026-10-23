@@ -6,6 +6,15 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.6
+
+- **New: the dashboard shows its own version** — a small muted `v1.3.6` badge
+  right under the `sm121` title. The version is baked into the binary at image
+  build time, so it always matches the add-on release you installed.
+- **New: the add-on page has an "OPEN WEB UI" button** (`webui` in the add-on
+  manifest) — one click from the Home Assistant add-on panel to the dashboard
+  on port 3100, no bookmark needed.
+
 ## 1.3.5
 
 - **Rebuild of 1.3.4 — the 1.3.4 image was built from a launcher commit that
