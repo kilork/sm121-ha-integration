@@ -26,7 +26,11 @@
 
 FROM rust:1.98.1-alpine3.22 AS builder
 # The add-on version, baked into the binary so the dashboard can show it.
+# ARG alone is NOT visible to the compiler: only an ENV reaches cargo's
+# environment, where `option_env!("SM121_VERSION")` picks it up (1.3.6 shipped
+# with "dev" because the RUN saw only a shell-level assignment of an unset ARG).
 ARG SM121_VERSION=dev
+ENV SM121_VERSION=${SM121_VERSION}
 COPY launcher-src/ /src/
 # Cache mounts are EPHEMERAL (detached after the RUN), so the cargo
 # target dir lives on a cache mount and the finished binary is copied to

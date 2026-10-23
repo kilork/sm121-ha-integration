@@ -6,6 +6,13 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.7
+
+- **Fixed: 1.3.6's version badge read `vdev`.** The image build passed the
+  version as a Docker build arg, but an `ARG` is not visible to the compiler —
+  only an `ENV` reaches `option_env!`. The builder stage now promotes the arg to
+  an env var, so the badge shows the real release (`v1.3.7`).
+
 ## 1.3.6
 
 - **New: the dashboard shows its own version** — a small muted `v1.3.6` badge
