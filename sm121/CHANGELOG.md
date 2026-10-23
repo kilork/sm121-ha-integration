@@ -6,6 +6,16 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.9
+
+- **Fixed: the version badge (again) — 1.3.6–1.3.8 all read `vdev`.** The build
+  arg reached the builder, but the value never reached the compiler: a warm
+  cargo cache keeps the old literal even with `rerun-if-env-changed`. The
+  launcher now generates the version into the build (`build.rs` →
+  `OUT_DIR/build_version.rs`) and the CI log prints
+  `warning: SM121_VERSION=<version>`, so this cannot silently regress. The badge
+  shows the real release from this image on.
+
 ## 1.3.8
 
 - **Fixed: the version badge showed `vdev` in 1.3.6 and 1.3.7.** The build arg
