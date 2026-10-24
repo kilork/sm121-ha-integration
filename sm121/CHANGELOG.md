@@ -6,6 +6,16 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.17
+
+- **One launcher config now serves FLARE on any cluster.** A single `[flare]`
+  block only fit the machine it was written for — the orbit cluster name, the
+  peer names, the controller and the local package dir all differ between
+  dgx1–4 and dgx5–8. `[flare.clusters.<cluster>]` supplies exactly those four
+  per cluster and wins over the flat fields, so `sm121 serve` picks the right
+  orbit cluster (e.g. `prod4` vs `sparks`) on its own, from the `--cluster` you
+  pass.
+
 ## 1.3.16
 
 - **FLARE lanes get the same preparation as docker lanes.** The launcher's
