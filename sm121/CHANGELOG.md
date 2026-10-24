@@ -6,6 +6,21 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.13
+
+- **FLARE lanes now show up in the recipes panel like any served recipe.** A
+  FLARE model runs through `flare orbit`, not docker, so the fleet probe now
+  reads the orbit cluster (`flare orbit status`) on the controller and folds its
+  groups into the usual fleet view: the recipe renders green "up (fleet)" with a
+  real uptime, and serve/stop controls light up the same way they do for a
+  docker lane. Needs the `[flare]` section in the config (binary + orbit
+  cluster); without it nothing changes.
+- **The FLARE engine driver is in the launcher** (`engine = "flare"`): preflight
+  of the installed agents on every node, package download on the controller,
+  `orbit run` detached, `/health` + `/v1/models` readiness, `orbit stop` on
+  stop and `orbit attach` for logs. FLARE lanes serve on the standard port
+  30000.
+
 ## 1.3.12
 
 - **The notification bell now opens under the bell** (it used to appear at the
