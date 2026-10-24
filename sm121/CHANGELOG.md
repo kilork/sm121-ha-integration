@@ -6,6 +6,19 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.15
+
+- **Multi-line options get a real editor.** The cluster TOML and the SSH key
+  are long, multi-line values that used to sit in single-line fields; there are
+  now list-style options (`sm121_config_extra_lines`, `sm121_ssh_key_b64_lines`)
+  that Home Assistant renders as a proper multi-row editor — one row per line.
+  The old single-line fields keep working (the list wins when both are set), so
+  an existing install boots unchanged.
+- **FLARE: the controller is found automatically** (pinned node → previously
+  seen winner → every cluster's rank-0 node; the first that answers
+  `flare orbit status` is used), and a group that has exited no longer shows up
+  as a running container.
+
 ## 1.3.14
 
 - FLARE visibility follow-up: the orbit group is reported once, on the

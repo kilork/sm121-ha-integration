@@ -20,7 +20,7 @@
 
 name: "sm121"
 description: "sm121 DGX Spark launcher — recipe-repo sync + the sm121 web dashboard (serve/stop/power)"
-version: "1.3.14"
+version: "1.3.15"
 slug: "sm121"
 
 image: "ghcr.io/kilork/sm121-addon"
@@ -62,10 +62,12 @@ options:
   sm121_recipe_repos: ""
   sm121_ssh_user: ""
   sm121_ssh_key_b64: ""
+  sm121_ssh_key_b64_lines: []
   sm121_ha_url: ""
   sm121_ha_token: ""
   sm121_registry_base: ""
   sm121_config_extra: ""
+  sm121_config_extra_lines: []
   sm121_repo_resync_minutes: 10
   sm121_web_token: ""
   sm121_insecure: false
@@ -80,7 +82,13 @@ schema:
   sm121_ha_url: str
   sm121_ha_token: str
   sm121_registry_base: str
+  # legacy single-line field (kept so an existing install keeps booting)
   sm121_config_extra: str
+  # the multi-line editor: one list row per line, joined with newlines
+  sm121_config_extra_lines:
+    - str
+  sm121_ssh_key_b64_lines:
+    - str
   sm121_repo_resync_minutes: int
   sm121_web_token: str
   sm121_insecure: bool

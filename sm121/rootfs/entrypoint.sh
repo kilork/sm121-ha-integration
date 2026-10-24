@@ -71,9 +71,15 @@ OPTS=/data/options.json
 if [ -s "$OPTS" ]; then
   for key in sm121_recipe_repos sm121_ssh_user sm121_ssh_key_b64 sm121_ha_url \
              sm121_ha_token sm121_registry_base sm121_config_extra \
-             sm121_repo_resync_minutes sm121_web_token; do
+             sm121_repo_resync_minutes sm121_web_token sm121_config_extra_lines \
+             sm121_ssh_key_b64_lines; do
     var=$(printf '%s' "$key" | tr '[:lower:]' '[:upper:]')
-    val="$(jq -r --arg k "$key" '.[$k] // empty' "$OPTS")"
+    # list options (the multi-line editors) are joined with newlines; the
+    # legacy single-line fields stay as they are
+    val="$(jq -r --arg k "$key" '
+      (.[$k] // empty)
+      | if type == "array" then (map(select(. != null)) | join("\n")) else . end
+    ' "$OPTS")"
     if [ -n "$val" ]; then export "$var=$val"; fi
   done
 fi
@@ -117,6 +123,15 @@ fi
 # string). This is where credentials that can't be expressed as flat
 # options live — e.g. a [mikrotik] block (it carries a password, so it is
 # deliberately NOT in the shared recipe repo's config.toml). Never logged.
+# The multi-line editor (`sm121_config_extra_lines`) wins over the legacy
+# single-line field when both are set.
+if [ -n "${SM121_CONFIG_EXTRA_LINES:-}" ]; then
+  SM121_CONFIG_EXTRA="$SM121_CONFIG_EXTRA_LINES"
+fi
+if [ -n "${SM121_SSH_KEY_B64_LINES:-}" ]; then
+  # base64 ignores embedded newlines, so a line-per-row paste is fine
+  SM121_SSH_KEY_B64="$(printf '%s' "$SM121_SSH_KEY_B64_LINES" | tr -d '\n')"
+fi
 if [ -n "${SM121_CONFIG_EXTRA:-}" ]; then
   printf '%s\n' "$SM121_CONFIG_EXTRA" >> "$CONFIG"
 fi
