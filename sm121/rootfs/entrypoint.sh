@@ -21,6 +21,10 @@
 #   SM121_SSH_KEY_PATH        where the key lands (default /etc/sm121/ssh_key)
 #   SM121_HA_URL / SM121_HA_TOKEN   → [home_assistant]
 #   SM121_REGISTRY_BASE       → [registry] base (for --image-source registry)
+#   SM121_CONFIG_EXTRA_FILE   where the private TOML block lives (default
+#                             /data/config-extra.toml — persistent, backed
+#                             up, and edited from the dashboard's settings
+#                             window; the legacy option below only seeds it)
 #   SM121_CONFIG_EXTRA        raw TOML appended verbatim — THE CLUSTER
 #                             CONFIG lives here ([[clusters]]/nccl with the
 #                             private IPs, [home_assistant], [mikrotik]):
@@ -46,6 +50,8 @@
 set -eu
 
 CONFIG=/etc/sm121/config.toml
+# The private TOML block, edited from the dashboard (persistent /data).
+EXTRA_FILE="${SM121_CONFIG_EXTRA_FILE:-/data/config-extra.toml}"
 mkdir -p /etc/sm121
 
 # Persist the sm121 cache (the recipe-repo checkouts) in the add-on's data
@@ -119,22 +125,42 @@ if [ -n "${SM121_REGISTRY_BASE:-}" ]; then
   printf '[registry]\nbase = "%s"\n' "$SM121_REGISTRY_BASE" >> "$CONFIG"
 fi
 
-# Raw per-install TOML, appended verbatim (the option is a multi-line
-# string). This is where credentials that can't be expressed as flat
-# options live — e.g. a [mikrotik] block (it carries a password, so it is
-# deliberately NOT in the shared recipe repo's config.toml). Never logged.
-# The multi-line editor (`sm121_config_extra_lines`) wins over the legacy
-# single-line field when both are set.
-if [ -n "${SM121_CONFIG_EXTRA_LINES:-}" ]; then
-  SM121_CONFIG_EXTRA="$SM121_CONFIG_EXTRA_LINES"
-fi
+# Raw per-install TOML. THE FILE WINS: the dashboard's settings window edits
+# EXTRA_FILE (a real multi-line textarea — the HA option form has no such
+# control, which is why the block lives here), so the operator pastes the
+# cluster config once in the dashboard instead of into a one-line option.
+# This is where credentials that can't be expressed as flat options live —
+# e.g. a [mikrotik] block (it carries a password, so it is deliberately NOT
+# in the shared recipe repo's config.toml). Never logged.
+#
+# Migration: if the file does not exist yet, the legacy option
+# (`SM121_CONFIG_EXTRA`, or the older line-list `SM121_CONFIG_EXTRA_LINES`)
+# is written into it — so an existing install keeps booting and the block
+# appears in the editor on the first boot of this version.
 if [ -n "${SM121_SSH_KEY_B64_LINES:-}" ]; then
   # base64 ignores embedded newlines, so a line-per-row paste is fine
   SM121_SSH_KEY_B64="$(printf '%s' "$SM121_SSH_KEY_B64_LINES" | tr -d '\n')"
 fi
-if [ -n "${SM121_CONFIG_EXTRA:-}" ]; then
-  printf '%s\n' "$SM121_CONFIG_EXTRA" >> "$CONFIG"
+if [ ! -f "$EXTRA_FILE" ]; then
+  legacy="${SM121_CONFIG_EXTRA_LINES:-${SM121_CONFIG_EXTRA:-}}"
+  if [ -n "$legacy" ]; then
+    mkdir -p "$(dirname "$EXTRA_FILE")" 2>/dev/null || true
+    if printf '%s\n' "$legacy" > "$EXTRA_FILE" 2>/dev/null; then
+      chmod 600 "$EXTRA_FILE" 2>/dev/null || true
+      echo "sm121: migrated the legacy config-extra option into $EXTRA_FILE"
+    else
+      # No writable /data (a plain `docker run` without the Supervisor):
+      # keep booting — the option is appended directly like before.
+      echo "sm121: WARN cannot write $EXTRA_FILE; appending the option instead" >&2
+      printf '%s\n' "$legacy" >> "$CONFIG"
+    fi
+  fi
 fi
+if [ -f "$EXTRA_FILE" ] && [ -s "$EXTRA_FILE" ]; then
+  printf '# --- private config block (edited in the dashboard: settings window)\n' >> "$CONFIG"
+  cat "$EXTRA_FILE" >> "$CONFIG"
+fi
+export SM121_CONFIG_EXTRA_FILE="$EXTRA_FILE"
 
 # --- 2. the SSH key ------------------------------------------------------------
 # HA add-on options cannot mount files: the key arrives base64-encoded as

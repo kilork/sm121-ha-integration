@@ -20,7 +20,7 @@
 
 name: "sm121"
 description: "sm121 DGX Spark launcher — recipe-repo sync + the sm121 web dashboard (serve/stop/power)"
-version: "1.3.18"
+version: "1.3.19"
 slug: "sm121"
 
 image: "ghcr.io/kilork/sm121-addon"
@@ -82,9 +82,12 @@ schema:
   sm121_ha_url: str
   sm121_ha_token: str
   sm121_registry_base: str
-  # legacy single-line field (kept so an existing install keeps booting)
+  # LEGACY: the private TOML block now lives in /data/config-extra.toml and is
+  # edited from the dashboard (settings window — a real multi-line editor; the
+  # option form has none). This option only SEEDS that file on first boot, so
+  # an existing install keeps working and the block shows up in the editor.
   sm121_config_extra: str
-  # the multi-line editor: one list row per line, joined with newlines
+  # older line-per-row form of the same legacy seed (superseded by the file)
   sm121_config_extra_lines:
     - str
   sm121_ssh_key_b64_lines:

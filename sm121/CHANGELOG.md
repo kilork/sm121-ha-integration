@@ -6,6 +6,27 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.19
+
+- **Settings window with a real multi-line editor.** The private config block
+  (clusters, nccl, HA token, mikrotik, registry) moved out of the one-line
+  add-on option into `/data/config-extra.toml`, edited in the dashboard
+  (`＋ → settings…`). It is validated as TOML before saving — a typo is refused
+  with the parse error and never reaches the disk — written atomically, and it
+  survives restarts and rides the add-on backup. On the first boot the old
+  `sm121_config_extra` option is migrated into the file automatically, so an
+  existing install needs no action; the option now only seeds the file.
+  Saving applies to the next command / add-on restart (the running dashboard
+  keeps its loaded config).
+- **Cache window.** `＋ → cache…` shows the shared Hugging Face cache on the
+  NAS — every repo with its size, plus the mount and free space — and an
+  **update all** button that refreshes them with a live percentage. It works
+  over SSH through the cluster, so the Pi still needs no NAS mount; only one
+  update can run at a time.
+- Good to know: Home Assistant's add-on option form has no multi-line field
+  (the schema only knows one-line strings), which is why the block lives in
+  the dashboard instead.
+
 ## 1.3.18
 
 - **Hugging Face panel in the recipes window** (`⌕ HF` next to `⟳ sync`): search
