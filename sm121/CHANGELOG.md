@@ -6,6 +6,13 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.14
+
+- FLARE visibility follow-up: the orbit group is reported once, on the
+  controller node of its cluster (it appeared on every node before), and the
+  controller is configured explicitly (`[flare].controller_node`), so a
+  multi-cluster config shows the FLARE lane on the right cluster.
+
 ## 1.3.13
 
 - **FLARE lanes now show up in the recipes panel like any served recipe.** A
