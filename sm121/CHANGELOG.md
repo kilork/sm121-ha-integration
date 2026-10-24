@@ -6,6 +6,18 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.16
+
+- **FLARE lanes get the same preparation as docker lanes.** The launcher's
+  native path (used by FLARE) never ran the `before_serve` hooks, so the global
+  GPU clock lock (`nvidia-smi -lgc`) was silently skipped and FLARE ran on
+  floating clocks — the likely reason its collective timeouts appeared after
+  long runs. Fixed for every native launch.
+- **The package can be mirrored onto the controller** (`[flare].local_dir`):
+  `serve` copies the package there (companions are named by sha256, so a size
+  mismatch triggers a re-copy) and launches FLARE from the local copy, which
+  keeps runtime table reads on local NVMe instead of the shared mount.
+
 ## 1.3.15
 
 - **Multi-line options get a real editor.** The cluster TOML and the SSH key
