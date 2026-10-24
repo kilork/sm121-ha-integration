@@ -6,6 +6,21 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.18
+
+- **Hugging Face panel in the recipes window** (`⌕ HF` next to `⟳ sync`): search
+  models, open the card (licence, task, gated), list every revision with its
+  commit, and copy `org/name@revision` into a recipe — or, for a FLARE package,
+  see exactly which revision and how big it is.
+- **Cache management from the dashboard's launcher** (`sm121 cache status`,
+  `cache doctor`, `cache update`): the shared HF cache on the NAS, reached over
+  SSH through the cluster, so the Pi needs no mount. `update` reports live
+  progress (percent of the size the HF API reports) while it downloads; the
+  progress sampler runs on the node and costs a directory listing per tick.
+- `hfrs` is installed on all eight nodes (built once, copied), and `cache
+  doctor` now finds the tooling where it actually lives (`~/.cargo/bin`,
+  `~/.local/bin`, `~/flare-bin`).
+
 ## 1.3.17
 
 - **One launcher config now serves FLARE on any cluster.** A single `[flare]`
