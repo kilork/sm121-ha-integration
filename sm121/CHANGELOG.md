@@ -6,6 +6,19 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.22
+
+- **FLARE topology: all rank nodes busy.** The dashboard/`health` now read the
+  `flare orbit status` rows per node and fold one pseudo-container onto each
+  rank node — a 4-rank FLARE serve shows 4 busy nodes and `free 0`, not only
+  the controller. Groups visible in `all8`/`pair12` because those clusters share
+  nodes are deduplicated by `(node, group)` and owned only by the cluster whose
+  node count matches the recipe's `required_nodes`.
+- **FLARE logs.** The `▤ logs` button for a FLARE recipe opens the controller's
+  `flare orbit attach <group> --cluster <orbit>` stream (web and CLI), instead
+  of Docker logs; the CLI prints both SSH stdout/stderr and no longer dies on the
+  5 s inactivity timeout.
+
 ## 1.3.21
 
 - **Bench window in the dashboard.** The recipes panel's `⚡ bench` button opens
