@@ -6,6 +6,27 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.20
+
+- **FLARE cluster identification in the dashboard.** Each cluster head now shows
+  a `◆ <orbit>` badge (orbit cluster + controller + live group names; dimmed
+  when nothing runs), and the topology frame/chip labels include the orbit. The
+  fleet probe asks only clusters the private config actually pairs with an orbit
+  — no flat `sparks` fallback for `6nodes-switch`/`1node-*`/`ds4`/`qwen38`, whose
+  nodes overlap the paired clusters. `serve` refuses an unpaired FLARE cluster
+  instead of silently launching onto another orbit.
+- **Prepared-package identification.** A mirrored FLARE package carries a marker
+  (repo, revision, TP, package version, local path); a matching marker skips the
+  `flare download` verification and the 500 GB recopy. The marker is checked
+  against the current prepared version, so a lab re-cut under the same revision
+  is detected.
+- **Incremental package mirror.** `rsync -a --delete` replaces the wipe-and-copy:
+  a changed package copies only changed files and a partial mirror resumes.
+- **Settings editor improvements.** The dashboard's settings window has a
+  **check** button (`POST /api/settings/extra/check`), line/column parse errors,
+  and `Ctrl+Enter` to save. The block still lives in `/data/config-extra.toml`
+  and applies on the next command / add-on restart.
+
 ## 1.3.19
 
 - **Settings window with a real multi-line editor.** The private config block
