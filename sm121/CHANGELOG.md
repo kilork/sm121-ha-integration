@@ -6,6 +6,20 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.21
+
+- **Bench window in the dashboard.** The recipes panel's `⚡ bench` button opens
+  the bench window instead of firing the standard run: choose recipe, cluster,
+  target node, run host (`ssh_host`, e.g. `pluto.lan`), label, seed,
+  concurrency, parallel, timeout, tokenizer, perf-only, depth and no-think.
+  The choices persist in the browser (`sm121-bench-params`).
+- **Live log + cancel.** The window polls the newest harness log
+  (`GET /api/bench/log?recipe=…`) so readiness/tokenizer/harness failures show
+  early; **⏹ cancel** sets the job's flag and kills the harness child
+  (`POST /api/bench/cancel`).
+- **Reopen.** Closing the bench window leaves a dock chip; `＋ → bench…`
+  reopens it, and the last recipe/job/parameters are restored on reload.
+
 ## 1.3.20
 
 - **FLARE cluster identification in the dashboard.** Each cluster head now shows
