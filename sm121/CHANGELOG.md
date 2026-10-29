@@ -6,6 +6,25 @@ top** (same version as `config.yaml`); the entry describes what changed in the
 launcher between that version and the previous one, in user terms (what an
 operator will notice in the dashboard or in their recipes).
 
+## 1.3.23
+
+- **Ships sm121 0.2.4.** The add-on image now carries the launcher release with
+  the liveness and bench fixes below; no dashboard restart is needed beyond the
+  normal add-on update.
+- **Switch checks are no longer API hammering.** A `[mikrotik]` switch is probed
+  by a plain TCP connect, without a RouterOS login; entity states are cached
+  (HA 120 s, RouterOS 300 s), so the dashboard's 30 s fleet tick no longer asks
+  the switch to authenticate on every tick. A power action clears the cache so
+  the next snapshot shows the new state.
+- **Bench window follows the current run.** `GET /api/bench/log` is tied to the
+  recipe's current bench job and only accepts a log written after that job
+  started; a previous campaign is labelled `previous`, and a fresh launch shows
+  `waiting` instead of an old log. Job ids survive a web restart and
+  `finish_job` updates the running job, not a stale finished one.
+- **Bench log + remote run fixes.** Launcher progress notes are appended into
+  the same report log (one truncate per run), and remote benches force a pty
+  with `ssh -tt`.
+
 ## 1.3.22
 
 - **FLARE topology: all rank nodes busy.** The dashboard/`health` now read the
